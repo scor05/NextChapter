@@ -46,6 +46,15 @@ with GraphDatabase.driver(uri = NEO_URI, auth = (NEO_USER, NEO_PASS)) as driver:
             database_="neo4j"
         )
         print(colorama.Fore.GREEN + "Nodo de libro creado con éxito")
+        driver.execute_query(
+            """
+            MATCH (l:Libro {name: $name})
+            DETACH DELETE l
+            """,
+            name="El Gran Diseño", 
+            database_="neo4j"
+        )
+        print(colorama.Fore.YELLOW + "Nodo de libro eliminado con éxito")
     except Exception as e:
         print(colorama.Fore.RED + f"Error: {e}")
         
