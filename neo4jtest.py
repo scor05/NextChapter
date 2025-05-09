@@ -39,5 +39,17 @@ DETACH DELETE *libro encontrado*
 
 
 with GraphDatabase.driver(uri = NEO_URI, auth = (NEO_USER, NEO_PASS)) as driver:
-    driver.execute_query()
+    driver.execute_query( 
+        """
+        CREATE (:Libro {name: $name, length: $length, author: $author, year: $year, genres: $genres})
+        """,
+        name=l1.name,
+        length=l1.length,
+        author=l1.author,
+        year=l1.year,
+        genres=l1.genres,
+        database_="neo4j"
+        )
+    print(colorama.Fore.GREEN + "Nodo de libro creado con éxito")
+    
 
