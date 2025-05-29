@@ -181,7 +181,7 @@ def recomendar_libros_por_favoritos(favoritos):
     
     # Retorna 3 libros al azar si los favoritos están vacíos
     if not favoritos:
-        return random.sample(todos_los_libros, 3)
+        return random.sample(todos_los_libros, 6)
 
     # Filtrar objetos Libro que están en favoritos
     libros_favoritos = [libro for libro in todos_los_libros if libro.name in favoritos]
@@ -203,6 +203,6 @@ def recomendar_libros_por_favoritos(favoritos):
 
     # Ordenar por mayor similitud y devolver top 3
     recomendaciones.sort(reverse=True, key=lambda x: x[0])
-    recomendados = [libro for _, libro in recomendaciones[:3]]
+    recomendados = [libro for _, libro in recomendaciones[:9]]
 
     return recomendados

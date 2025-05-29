@@ -124,7 +124,7 @@ def libros_favoritos(titulos: List[str] = Query(...)):
         return [
             {
                 "titulo": libro.name,
-                "generos": libro.genres[:3],
+                "generos": libro.genres[:5],
                 "autores": libro.authors[:2],
                 "year": libro.year,
             }
