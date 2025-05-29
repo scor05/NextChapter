@@ -1,38 +1,49 @@
-export default function Favoritos() {
+import { useEffect, useState } from "react";
+import axios from "axios";
+import BookCard from "../components/BookCard";
+import qs from "qs";
+
+export default function Favoritos({ usuario, setUsuario }) {
+  const [libros, setLibros] = useState([]);
+
+  useEffect(() => {
+    const fetchFavoritos = async () => {
+      try {
+        const res = await axios.get("http://localhost:8000/api/libros_favoritos", {
+          params: { titulos: usuario.favoritos },
+          paramsSerializer: (params) =>
+            qs.stringify(params, { arrayFormat: "repeat" })
+        });
+        setLibros(res.data);
+      } catch (error) {
+        console.error("Error al cargar favoritos:", error);
+      }
+    };
+
+    if (usuario?.favoritos?.length > 0) {
+      fetchFavoritos();
+    }
+  }, [usuario]);
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <h2 className="text-2xl font-bold mb-4">Mis Favoritos</h2>
       <p className="text-gray-600 mb-4">Aquí aparecerán los libros que marcaste como favoritos.</p>
 
-      {/* Primera fila de libros */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-        {["A", "B", "C"].map((letra) => (
-          <div key={letra} className="bg-white p-4 rounded-lg shadow text-center">
-            <div className="h-40 w-full bg-orange-400 rounded mb-2 text-white flex items-center justify-center font-bold">
-              PORTADA
-            </div>
-            <h3 className="font-semibold">Nombre Libro {letra}</h3>
-            <p className="text-sm text-gray-600">Autor · Género · Año</p>
-            <button className="mt-2 bg-red-600 text-white px-4 py-2 rounded">Eliminar</button>
-          </div>
-        ))}
-      </div>
-
-      {/* Segunda fila de libros */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-        {["D", "E", "F"].map((letra) => (
-          <div key={letra} className="bg-white p-4 rounded-lg shadow text-center">
-            <div className="h-40 w-full bg-orange-400 rounded mb-2 text-white flex items-center justify-center font-bold">
-              PORTADA
-            </div>
-            <h3 className="font-semibold">Nombre Libro {letra}</h3>
-            <p className="text-sm text-gray-600">Autor · Género · Año</p>
-            <button className="mt-2 bg-red-600 text-white px-4 py-2 rounded">Eliminar</button>
-          </div>
-        ))}
-      </div>
-
-      <p className="text-gray-600">¡Agrega libros a tus favoritos desde la página de búsqueda!</p>
+      {libros.length === 0 ? (
+        <p className="text-gray-500">No tienes libros en favoritos aún.</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+          {libros.map((libro, i) => (
+            <BookCard
+              key={i}
+              book={libro}
+              usuario={usuario}
+              setUsuario={setUsuario}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
