@@ -2,10 +2,6 @@ import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import axios from "axios";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-
 export default function Login({ onLogin }) {
   const [correo, setCorreo] = useState("");
   const [contraseña, setContraseña] = useState("");
@@ -41,22 +37,8 @@ export default function Login({ onLogin }) {
         value={contraseña}
         onChange={(e) => setContraseña(e.target.value)}
       />
-      <input
-        className="w-full border px-3 py-2 mb-4 rounded"
-        placeholder="Correo electrónico"
-        value={correo}
-        onChange={(e) => setCorreo(e.target.value)}
-      />
-      <input
-        className="w-full border px-3 py-2 mb-4 rounded"
-        type="password"
-        placeholder="Contraseña"
-        value={contraseña}
-        onChange={(e) => setContraseña(e.target.value)}
-      />
       <button
         className="bg-blue-900 text-white w-full py-2 rounded"
-        onClick={handleLogin}
         onClick={handleLogin}
       >
         Entrar
@@ -66,5 +48,6 @@ export default function Login({ onLogin }) {
       </p>
     </div>
   );
-  );
 }
+// Este componente maneja el inicio de sesión del usuario
+// y redirige a la página principal al completar el proceso.
