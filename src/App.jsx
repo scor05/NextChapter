@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { useState } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Buscar from './pages/Buscar'
 import Favoritos from './pages/Favoritos'
+import Lobby from './pages/Lobby'
+import Login from './pages/Login'
 import Lobby from './pages/Lobby'
 import Login from './pages/Login'
 import Perfil from './pages/Perfil'
@@ -10,8 +14,21 @@ import Register from './pages/Register'
 
 function App() {
   const [usuario, setUsuario] = useState(null);
+  const [usuario, setUsuario] = useState(null);
 
   // Si NO está logueado, solo mostrar Login y Register
+  if (!usuario) {
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <Routes>
+        <Route path="/login" element={<Login onLogin={(user) => setUsuario(user)} />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="*" element={<Navigate to="/login" />} />
+      </Routes>
+    </main>
+  );
+}
+
   if (!usuario) {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
