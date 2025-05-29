@@ -1,25 +1,42 @@
-import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useEffect, useState } from "react";
 
-export default function BookCard({ book }) {
+export default function BookCard({ book, usuario, setUsuario }) {
   const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("favoritos")) || [];
-    setIsFavorite(stored.some((fav) => fav.id === book.id));
-  }, [book.id]);
-
-  const toggleFavorite = () => {
-    const stored = JSON.parse(localStorage.getItem("favoritos")) || [];
-    let updated;
-
-    if (isFavorite) {
-      updated = stored.filter((fav) => fav.id !== book.id);
+    if (usuario?.favoritos?.includes(book.titulo)) {
+      setIsFavorite(true);
     } else {
-      updated = [...stored, book];
+      setIsFavorite(false);
     }
+  }, [usuario, book.titulo]);
 
-    localStorage.setItem("favoritos", JSON.stringify(updated));
-    setIsFavorite(!isFavorite);
+  const toggleFavorite = async () => {
+    if (!usuario) return;
+
+    const nuevosFavoritos = isFavorite
+      ? usuario.favoritos.filter((titulo) => titulo !== book.titulo)
+      : [...usuario.favoritos, book.titulo];
+
+    try {
+      await axios.put("http://localhost:8000/api/modificar_usuario", {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        correo: usuario.correo,
+        contraseña: null,
+        favoritos: nuevosFavoritos
+      }, {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      setUsuario({ ...usuario, favoritos: nuevosFavoritos });
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error("Error actualizando favoritos:", error);
+    }
   };
 
   return (
@@ -27,21 +44,20 @@ export default function BookCard({ book }) {
       {/* Estrellita arriba a la derecha */}
       <button
         onClick={toggleFavorite}
-        className="absolute top-2 right-2 text-yellow-500 text-2xl hover:scale-110 transition"
+        className={`absolute top-2 right-2 text-2xl transition ${
+          isFavorite ? "text-yellow-500" : "text-gray-300"
+        } hover:scale-110`}
         title={isFavorite ? "Eliminar de favoritos" : "Agregar a favoritos"}
       >
-        {isFavorite ? "★" : "☆"}
+        ★
       </button>
-
-      {/* Imagen ficticia de portada */}
-      <div className="h-40 w-full bg-orange-400 rounded mb-2 text-white flex items-center justify-center font-bold">
-        PORTADA
-      </div>
-
       {/* Detalles del libro */}
-      <h3 className="font-semibold">{book.title}</h3>
-      <p className="text-sm text-gray-600">
-        {book.author} · {book.genre} · {book.year}
+      <h3 className="text-lg font-semibold mb-1">{book.titulo}</h3>
+      <p className="text-sm text-gray-600 mb-1">
+        <strong>Autores:</strong> {book.autores.join(", ")}
+      </p>
+      <p className="text-sm text-gray-600 mb-1">
+        <strong>Géneros:</strong> {book.generos.join(", ")}
       </p>
     </div>
   );

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import axios from "axios";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Register() {
@@ -7,11 +8,20 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (username && email && password) {
-      alert("Registro exitoso");
-      navigate("/login");
+      try {
+        await axios.post("http://localhost:8000/api/register", {
+          nombre: username,
+          correo: email,
+          contraseña: password
+        });
+        alert("Registro exitoso");
+        navigate("/login");
+      } catch (error) {
+        alert("Error al registrar: " + error.response?.data?.detail);
+      }
     } else {
       alert("Llena todos los campos");
     }
@@ -42,7 +52,9 @@ export default function Register() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <button className="bg-green-600 text-white w-full p-2 rounded">Registrar</button>
+        <button className="bg-blue-900 text-white w-full py-2 rounded">
+          Registrarse
+        </button>
       </form>
     </div>
   );
