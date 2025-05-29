@@ -50,6 +50,16 @@ def getUsuarios():
         print("Error al obtener usuarios: ", e)
     return result
 
+def getUsuario(correo):
+    try:
+        userDBCursor.execute("SELECT * FROM usuarios WHERE correo = %s", (correo,))
+        usuario = userDBCursor.fetchone()
+        return usuario
+    except Exception as e:
+        print("Error al obtener usuario:", e)
+        return None
+
+
 def eliminarUsuario(usuario_id):
     userDBCursor.execute("SELECT 1 FROM usuarios WHERE id = %s", (usuario_id))
     if userDBCursor.fetchone(): 
