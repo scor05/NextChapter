@@ -1,9 +1,19 @@
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from controller import insertarUsuario, getUsuarios, obtener_libros_objetos, hashPassword, deHashPassword
+from controller import *
 import bcrypt
+import uvicorn
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Modelos para el frontend
 class UsuarioRegistro(BaseModel):
@@ -27,21 +37,28 @@ class UsuarioModificacion(BaseModel):
 def register(usuario: UsuarioRegistro):
     try:
         insertarUsuario(usuario.nombre, usuario.correo, usuario.contraseña, [])
-        return {"mensaje": "Usuario creado exitosamente."}
+        return {"mensaje": "Usuario creado exitosamDente."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/login")
 def login(usuario: UsuarioLogin):
-    usuarios = getUsuarios()
-    for u in usuarios:
-        id_db, nombre_db, correo_db, contraseña_hash, favoritos = u
-        if correo_db == usuario.correo:
-            if bcrypt.checkpw(usuario.contraseña.encode("utf-8"), contraseña_hash.encode("utf-8")):
-                return {"id": id_db, "nombre": nombre_db, "correo": correo_db, "favoritos": favoritos}
-            else:
-                raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
-    raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    user_data = getUsuario(usuario.correo)
+    if user_data is None:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    
+    id, nombre, correo, hashed_password, favoritos = user_data
+    if not bcrypt.checkpw(usuario.contraseña.encode('utf-8'), hashed_password.encode('utf-8')):
+        raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
+
+    return {
+        "mensaje": "Login exitoso.",
+        "usuario": {
+            "nombre": nombre,
+            "correo": correo,
+            "favoritos": favoritos
+        }
+    }
 
 @app.get("/api/libros")
 def obtener_libros():
@@ -56,3 +73,7 @@ def obtener_libros():
         }
         for libro in libros
     ]
+
+
+if __name__ == "__main__":
+    uvicorn.run("driver:app", host="0.0.0.0", port=8000, reload=True)

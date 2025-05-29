@@ -35,7 +35,7 @@ def insertarUsuario(nombre, correo, contraseña, favoritos):
 # bcrypt hashing:
 def hashPassword(password):
     hashedPass = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
-    return hashedPass
+    return hashedPass.decode("utf-8")
 
 def deHashPassword(password):
     return password.decode("utf-8")
