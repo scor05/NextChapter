@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Buscar from './pages/Buscar'
-import Descubrir from './pages/Descubrir'
 import Favoritos from './pages/Favoritos'
 import Lobby from './pages/Lobby'
 import Login from './pages/Login'
@@ -34,7 +33,6 @@ function App() {
       <Route path="/" element={<Lobby />} />
       <Route path="/buscar" element={<Buscar />} />
       <Route path="/favoritos" element={<Favoritos />} />
-      <Route path="/descubrir" element={<Descubrir />} />
       <Route path="/perfil" element={<Perfil />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

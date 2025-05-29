@@ -3,6 +3,8 @@ import psycopg2
 from neo4j import GraphDatabase
 import bcrypt
 from Libro import Libro
+import random
+from collections import Counter
 
 # Conexión de postgres (NOTA: Usamos railway para hostear la DB)
 userDBConnection = psycopg2.connect(
@@ -111,21 +113,96 @@ def obtener_libros_objetos():
     def fetch(tx):
         result = tx.run("""
             MATCH (l:Libro)
-            RETURN l.titulo AS titulo, l.autores AS autores, l.generos AS generos,
-                   l.anio AS anio, l.paginas AS paginas
+            RETURN l.titulo AS titulo, l.autores AS autores, l.generos AS generos, l.anio AS anio
         """)
-        return result
+        return [record for record in result]
 
     with driver.session() as session:
-        result = session.execute_read(fetch)
-        for record in result:
-            libro = Libro(
-                name=record["titulo"],
-                length=record["paginas"],
-                authors=record["autores"],
-                year=record["anio"],
-                genres=record["generos"]
-            )
-            libros.append(libro)
+        records = session.execute_read(fetch)
 
+    libros = []
+    for record in records:
+        libros.append(
+            Libro(
+                name=record["titulo"],
+                authors=record["autores"],
+                genres=record["generos"],
+                year=record["anio"],
+            )
+        )
     return libros
+
+# Función Jaccard que permite calcular la similitud entre dos sets sin importar de qué son.
+def jaccard(set1, set2):
+    inter = len(set1 & set2)
+    union = len(set1 | set2)
+    return inter / union if union else 0
+
+# Función similitud modificada ya para que acepte varios autores y adaptada para que tenga un rango de [0,1]:
+# sim(A,B) = 1 - [sim_generos + sim_año + sim_autor + sim_len]
+# Donde:
+# sim_generos = w_gen * (1 - Jaccard(generosA, generosB))
+# sim_año = w_año * (abs(añoA - añoB) / intervaloAños)
+# sim_autor = w_autor * (1 - Jaccard(autoresA, autoresB))
+
+def similitud(libroA, libroB):
+    
+    # CONSTANTES (SE PUEDEN MODIFICAR SI NO TIRA BUENAS RECOMENDACIONES)
+    w_gen = 0.5
+    w_año = 0.2
+    w_autor = 0.3
+    año_max_dif = 150
+    
+    # Géneros
+    generosA = set(libroA.genres)
+    generosB = set(libroB.genres)
+    sim_generos = jaccard(generosA, generosB)
+
+    # Años de publicación
+    if libroA.year is None or libroB.year is None:
+        dif_año = 1
+    else:
+        dif_año = min(abs(libroA.year - libroB.year) / año_max_dif, 1)
+
+    # Autores
+    autoresA = set(a.lower() for a in libroA.authors)
+    autoresB = set(b.lower() for b in libroB.authors)
+    sim_autor = jaccard(autoresA, autoresB)
+
+    dissimilitud = (
+        w_gen * (1 - sim_generos) + 
+        w_año * dif_año + 
+        w_autor * (1 - sim_autor)
+    )
+    return round(max(0, 1 - dissimilitud), 4)
+
+def recomendar_libros_por_favoritos(favoritos):
+    todos_los_libros = obtener_libros_objetos()
+    
+    # Retorna 3 libros al azar si los favoritos están vacíos
+    if not favoritos:
+        return random.sample(todos_los_libros, 3)
+
+    # Filtrar objetos Libro que están en favoritos
+    libros_favoritos = [libro for libro in todos_los_libros if libro.name in favoritos]
+
+    generos_usuario = Counter()
+    for libro in libros_favoritos:
+        generos_usuario.update(libro.genres)
+
+
+    recomendaciones = []
+    for libro in todos_los_libros:
+        if libro.name in favoritos:
+            continue  # no recomendar favoritos
+
+        # Promedio de similitud con todos los favoritos
+        similitudes = [similitud(libro, favorito) for favorito in libros_favoritos]
+        score_promedio = sum(similitudes) / len(similitudes)
+        recomendaciones.append((score_promedio, libro))
+
+    # Ordenar por mayor similitud y devolver top 3
+    recomendaciones.sort(reverse=True, key=lambda x: x[0])
+    recomendados = [libro for _, libro in recomendaciones[:3]]
+
+    return recomendados

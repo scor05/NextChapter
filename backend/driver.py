@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from controller import *
+from typing import List, Optional
 import bcrypt
 import uvicorn
 
@@ -27,10 +28,10 @@ class UsuarioLogin(BaseModel):
 
 class UsuarioModificacion(BaseModel):
     id: int
-    nombre: str | None = None
-    correo: str | None = None
-    contraseña: str | None = None
-    favoritos: list[str] | None = None
+    nombre: Optional[str]
+    correo: Optional[str]
+    contraseña: Optional[str]
+    favoritos: Optional[List[str]]
 
 # ENDPOINTS
 @app.post("/api/register")
@@ -47,13 +48,14 @@ def login(usuario: UsuarioLogin):
     if user_data is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
     
-    id, nombre, correo, hashed_password, favoritos = user_data
+    idNum, nombre, correo, hashed_password, favoritos = user_data
     if not bcrypt.checkpw(usuario.contraseña.encode('utf-8'), hashed_password.encode('utf-8')):
         raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
 
     return {
         "mensaje": "Login exitoso.",
         "usuario": {
+            "id": idNum,
             "nombre": nombre,
             "correo": correo,
             "favoritos": favoritos
@@ -69,11 +71,68 @@ def obtener_libros():
             "autores": libro.authors,
             "generos": libro.genres,
             "anio": libro.year,
-            "paginas": libro.length
         }
         for libro in libros
     ]
 
+@app.get("/api/recomendar")
+def recomendar(correo: str):
+    try:
+        user_data = getUsuario(correo)
+        if not user_data:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        favoritos = user_data[-1]  # -1 es el último index.
+        recomendaciones = recomendar_libros_por_favoritos(favoritos)
+        
+        # Serializar libros
+        libros_json = []
+        for libro in recomendaciones:
+            libros_json.append({
+                "titulo": libro.name,
+                "generos": libro.genres[:3],  # Mostrar como máximo 3 géneros y 2 autores porque si no sería muy largo
+                "autores": libro.authors[:2],
+                "year": libro.year,
+            })
+        return libros_json
+
+    except Exception as e:
+        print("Error en /api/recomendar:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/modificar_usuario")
+async def modificar_usuario(request: Request):
+    try:
+        raw_body = await request.body()
+
+        data = await request.json()
+
+        # Puedes reconstruir el modelo Pydantic a mano
+        modificado = UsuarioModificacion(**data)
+        modificarUsuario(modificado.id, modificado.nombre, modificado.correo, modificado.contraseña, modificado.favoritos)
+
+        return {"mensaje": "Usuario actualizado correctamente."}
+    except Exception as e:
+        print("Error al procesar JSON/modificación:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/libros_favoritos")
+def libros_favoritos(titulos: List[str] = Query(...)):
+    try:
+        todos = obtener_libros_objetos()
+        filtrados = [libro for libro in todos if libro.name in titulos]
+        return [
+            {
+                "titulo": libro.name,
+                "generos": libro.genres[:3],
+                "autores": libro.authors[:2],
+                "year": libro.year,
+            }
+            for libro in filtrados
+        ]
+    except Exception as e:
+        print("Error en /api/libros_favoritos:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("driver:app", host="0.0.0.0", port=8000, reload=True)
