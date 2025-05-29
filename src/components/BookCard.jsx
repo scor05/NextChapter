@@ -59,6 +59,9 @@ export default function BookCard({ book, usuario, setUsuario }) {
       <p className="text-sm text-gray-600 mb-1">
         <strong>Géneros:</strong> {book.generos.join(", ")}
       </p>
+      <p className="text-sm text-gray-600 mb-1">
+        <strong>Año de Publicación:</strong> {book.year}
+      </p>
     </div>
   );
 }

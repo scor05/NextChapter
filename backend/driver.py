@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Body, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from controller import *
@@ -133,6 +133,50 @@ def libros_favoritos(titulos: List[str] = Query(...)):
     except Exception as e:
         print("Error en /api/libros_favoritos:", e)
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/buscar")
+def buscar_libros(titulo: Optional[str] = None, autor: Optional[str] = None, genero: Optional[str] = None):
+    try:
+        if not titulo and not autor and not genero:
+            raise HTTPException(
+                status_code=400,
+                detail="Debe de llenar por lo menos un campo."
+            )
+
+        todos = obtener_libros_objetos()
+        resultados = []
+        
+        for libro in todos:
+            titulo_match = True
+            autor_match = True
+            genero_match = True
+            
+            if titulo:
+                titulo_match = titulo.lower() in libro.name.lower()
+            if autor:
+                autor_match = any(autor.lower() in a.lower() for a in libro.authors)
+            if genero:
+                genero_match = any(genero.lower() in g.lower() for g in libro.genres)
+            
+            if titulo_match and autor_match and genero_match:
+                resultados.append({
+                    "titulo": libro.name,
+                    "autores": libro.authors,
+                    "generos": libro.genres,
+                    "year": libro.year
+                })
+
+        return resultados
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("Error en /api/buscar:", e)
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno al buscar libros. Por favor intente nuevamente."
+        )
+
 
 if __name__ == "__main__":
     uvicorn.run("driver:app", host="0.0.0.0", port=8000, reload=True)
