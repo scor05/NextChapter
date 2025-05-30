@@ -1,8 +1,10 @@
+from operator import itemgetter
 from envloader import *
 import psycopg2
 from neo4j import GraphDatabase
 import bcrypt
 from Libro import Libro
+from populateDBandNeo import crear_libro_y_relacion
 import random
 from collections import Counter
 
@@ -206,3 +208,72 @@ def recomendar_libros_por_favoritos(favoritos):
     recomendados = [libro for _, libro in recomendaciones[:9]]
 
     return recomendados
+
+# ------------------------- FUNCIONES DE UTILIDAD --------------------------------
+
+# Quita el libro de tanto neo4j como de postgres
+def quitar_libro(titulo):
+    try:
+        # Eliminar de neo4j
+        with driver.session() as session:
+            session.run("MATCH (l:Libro {titulo: $titulo}) DETACH DELETE l", titulo=titulo)
+        
+        # Eliminar de postgres
+        query = """
+            UPDATE usuarios
+            SET favoritos = array_remove(favoritos, %s)
+            WHERE %s = ANY(favoritos);
+        """
+        userDBCursor.execute(query, (titulo, titulo))
+        
+    except Exception as e:
+        print(f"Error al eliminar el libro {titulo}", e)
+    
+# Agrega el libro a neo4j y calcula las aristas necesarias para él.
+def agregar_libro(titulo, autores, generos, year):
+    try:
+        libro_nuevo = Libro(titulo, autores, year, generos)
+        with driver.session() as session:
+            session.run(
+                """
+                MERGE (l:Libro {titulo: $titulo})
+                SET l.autores = $autores,
+                    l.generos = $generos,
+                    l.anio = $anio
+                """,
+                titulo=libro_nuevo.name,
+                autores=libro_nuevo.authors,
+                generos=libro_nuevo.genres,
+                anio=libro_nuevo.year
+            )
+        
+        result = session.run("""
+                MATCH (l:Libro)
+                WHERE l.titulo <> $titulo
+                RETURN l.titulo AS titulo, l.autores AS autores, l.generos AS generos, l.anio AS anio
+            """, titulo=libro_nuevo.name)
+
+        existentes = []
+        for record in result:
+            existentes.append(
+                Libro(
+                    name=record["titulo"],
+                    authors=record["autores"] or [],
+                    year=record["anio"],
+                    genres=record["generos"] or []
+                )
+            )
+        
+        similitudes = []
+        for libroB in existentes:
+            s = similitud(libro_nuevo, libroB)
+            similitudes.append((libroB, s)) # Array de tuplas
+
+        # K vecinos más cercanos
+        k = 4
+        top_k = sorted(similitudes, key=itemgetter(1), reverse=True)[:k]
+        for libroB, s in top_k:
+            session.execute_write(crear_libro_y_relacion, libro_nuevo, libroB, s)
+        
+    except Exception as e:
+        print("Error al agregar libro: ", e)
